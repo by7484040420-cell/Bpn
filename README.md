@@ -1,26 +1,32 @@
-# BIPIN AI — Split-View Chat + Government Portal WebView + Auto-Fill (Sample)
+# BIPIN AI - Government Form Assistant (Android)
 
-Yeh sample dikhata hai: user "Open [Service]" jaisa button chat bubble mein tap kare,
-to right-side panel mein **asli government website** WebView ke andar khul jaye, aur
-text fields (jinke liye humne selector verify kiya hai) automatically fill ho jaye.
+Phone ko sideways (landscape) chalao. Layout laptop jaisa hai:
 
-## Ab kitne portal hai — 6, real URLs ke saath (`GovtService.kt`)
-1. **PAN Card** — incometax.gov.in/iec/foportal (Instant e-PAN)
-2. **Income Tax e-Filing** — incometax.gov.in/iec/foportal
-3. **Aadhaar** — myaadhaar.uidai.gov.in
-4. **Driving License** — sarathi.parivahan.gov.in (state-specific, dropdown se select hota hai)
-5. **Ration Card** — nfsa.gov.in (directory hai; asli apply link state ke food-portal pe hota hai)
-6. **Scholarship** — scholarships.gov.in (National Scholarship Portal)
+- Header: menu (☰) button, BIPIN AI naam, Online
+- Left: AI chat. Right: sarkari portal (desktop mode), dono aadhe-aadhe
+- Menu (☰): Home, PAN Card, Income Tax, Aadhaar, Driving License, Ration Card, Scholarship, My details
+- Service chunte hi AI jawab deta hai aur portal right side mein khul jata hai
 
-Screenshot mein "Other Services" bhi tha — us category ke andar kai alag portals ho sakte
-hai, to usse ek single URL nahi diya, jab specific service pata chale to `GovtService` mein
-naya entry add kar dena.
+## My details + auto-fill
+- Menu > "My details" mein naam, father ka naam, DOB, mobile, email, Aadhaar bharo
+- Details sirf phone mein encrypted save hoti hain (Android Keystore), kisi server pe nahi jaati
+- Portal pe chat mein "details bhar do" likho ya toolbar ka blue pencil dabao
+- Sirf .gov.in pages pe chalta hai. CAPTCHA, OTP aur Submit user khud karta hai
 
 ## Files
-- `activity_main.xml` — split layout: left = chat, right = WebView panel (hidden by default)
-- `item_chat_bubble.xml` — ek chat bubble ka layout, jisme optional "Open Portal" button hai
-- `bg_input_field.xml` — rounded background drawable
-- `ChatMessage.kt` — ek message ka data model (text ke saath optional portalUrl/label)
+- app/src/main/java/com/bipinai/chat/
+  - MainActivity.kt   screen, menu, portal, my details, auto-fill trigger
+  - ChatAdapter.kt / ChatMessage.kt   chat bubbles
+  - GovtService.kt    services, URLs, keyword matching (placeholder for real AI)
+  - ProfileStore.kt   encrypted storage of the user details
+  - FormAutoFiller.kt fills text fields of the open page
+- app/src/main/res/  layouts, drawables, colors, theme
+- .github/workflows/build-apk.yml   builds the APK on GitHub
+
+## TODO
+- Real AI backend (never send Aadhaar / saved details to it)
+- Verify auto-fill on each portal
+ional portalUrl/label)
 - `ChatAdapter.kt` — RecyclerView adapter; portal button tap hone par callback fire karta hai
 - `GovtService.kt` — **saare 6 portal ki real URLs**, har ek ka note, aur (jahan verify
   kiya) fieldMap for auto-fill

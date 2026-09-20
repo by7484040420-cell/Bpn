@@ -1,15 +1,12 @@
 package com.bipinai.chat
 
 import android.content.ActivityNotFoundException
-import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
-import android.util.Patterns
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -22,8 +19,6 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -34,19 +29,11 @@ import androidx.recyclerview.widget.RecyclerView
  *   left  = AI chat        right = government portal (desktop mode)
  * The service list (PAN, Aadhaar ...) slides over the left side when the
  * menu button is tapped; tapping a service opens its portal on the right.
- * "My details" (in the same menu) stores the user's own details encrypted on
- * this phone; the pencil button / the chat command "details bhar do" fills them
- * into the open .gov.in page.
  */
 class MainActivity : AppCompatActivity() {
 
-    /** One entry in the sidebar (Home has service == null and isProfile == false). */
-    private data class NavItem(
-        val icon: String,
-        val label: String,
-        val service: GovtService?,
-        val isProfile: Boolean = false
-    )
+    /** One entry in the sidebar (Home has service == null). */
+    private data class NavItem(val icon: String, val label: String, val service: GovtService?)
 
     private val messages = mutableListOf<ChatMessage>()
     private lateinit var chatAdapter: ChatAdapter
@@ -67,15 +54,9 @@ class MainActivity : AppCompatActivity() {
     private var activeService: GovtService? = null
     private var portalWide = false
 
-    // File upload (photo / signature / PDF) requested by a portal page.
-    private var fileCallback: ValueCallback<Array<Uri>>? = null
-    private val fileChooserLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            fileCallback?.onReceiveValue(
-                WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
-            )
-            fileCallback = null
-        }
+    // DEMO ONLY. In the real app this comes from the logged-in user's own
+    // profile (stored securely) — NEVER hardcode real user data like this.
+    private val userProfile = mapOf("mobile" to "9999999999")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,9 +72,7 @@ class MainActivity : AppCompatActivity() {
         addMessage(
             ChatMessage(
                 text = "Namaste! Main BIPIN AI hoon. Kaun si sarkari service mein madad chahiye? " +
-                    "Upar left ke menu se service chuniye ya likhiye, jaise \"Mujhe PAN card banana hai\".\n\n" +
-                    "Menu mein \"My details\" bhar do, phir portal pe \"details bhar do\" likho — " +
-                    "main form bhar dunga.",
+                    "Upar left ke menu se service chuniye ya likhiye, jaise \"Mujhe PAN card banana hai\".",
                 isFromUser = false
             )
         )
@@ -125,23 +104,13 @@ class MainActivity : AppCompatActivity() {
         chatRecycler.scrollToPosition(messages.size - 1)
     }
 
-    private fun aiSay(text: String) = addMessage(ChatMessage(text = text, isFromUser = false))
-
     private fun sendUserMessage() {
         val text = messageInput.text.toString().trim()
         if (text.isEmpty()) return
         addMessage(ChatMessage(text = text, isFromUser = true))
         messageInput.text.clear()
 
-        // "details bhar do" / "fill" while a portal is open -> fill the form.
-        val lower = text.lowercase()
-        if (webPanel.visibility == View.VISIBLE && (lower.contains("bhar") || lower.contains("fill"))) {
-            chatRecycler.postDelayed({ runAutoFill() }, 300)
-            return
-        }
-
         // TODO: replace this keyword matching with your bot/LLM backend call.
-        // Never send the saved personal details (Aadhaar etc.) to that backend.
         val service = GovtService.match(text)
         chatRecycler.postDelayed({
             addMessage(
@@ -156,8 +125,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupServiceNav() {
         val container = findViewById<LinearLayout>(R.id.serviceList)
         val items = listOf(NavItem("🏠", "Home", null)) +
-            GovtService.entries.map { NavItem(it.icon, it.shortName, it) } +
-            NavItem("📝", "My details", null, isProfile = true)
+            GovtService.entries.map { NavItem(it.icon, it.shortName, it) }
 
         for (item in items) {
             val view = layoutInflater.inflate(R.layout.item_service_side, container, false)
@@ -176,16 +144,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun highlightNav(service: GovtService?) {
         for ((item, view) in navViews) {
-            view.isSelected = !item.isProfile && item.service == service
+            view.isSelected = (item.service == service)
         }
     }
 
     private fun onNavClick(item: NavItem) {
         sidebar.visibility = View.GONE
-        if (item.isProfile) {
-            showProfileDialog()
-            return
-        }
         val service = item.service
         if (service == null) {
             closePortal()
@@ -194,118 +158,6 @@ class MainActivity : AppCompatActivity() {
         // AI explains on the left while the portal opens on the right.
         addMessage(service.toChatMessage())
         openPortal(service)
-    }
-
-    // -------------------------------------------------------------- my details
-
-    private fun showProfileDialog() {
-        val view = layoutInflater.inflate(R.layout.dialog_profile, null)
-        val fields = mapOf(
-            "firstName" to view.findViewById<EditText>(R.id.fieldFirstName),
-            "middleName" to view.findViewById<EditText>(R.id.fieldMiddleName),
-            "lastName" to view.findViewById<EditText>(R.id.fieldLastName),
-            "fatherName" to view.findViewById<EditText>(R.id.fieldFatherName),
-            "dob" to view.findViewById<EditText>(R.id.fieldDob),
-            "mobile" to view.findViewById<EditText>(R.id.fieldMobile),
-            "email" to view.findViewById<EditText>(R.id.fieldEmail),
-            "aadhaar" to view.findViewById<EditText>(R.id.fieldAadhaar)
-        )
-        val saved = ProfileStore.load(this)
-        for ((key, edit) in fields) {
-            edit.setText(saved[key] ?: "")
-        }
-
-        val dialog = AlertDialog.Builder(this)
-            .setView(view)
-            .setPositiveButton("Save", null)
-            .setNegativeButton("Cancel", null)
-            .setNeutralButton("Delete all") { _, _ ->
-                ProfileStore.clear(this)
-                Toast.makeText(this, "Saari details delete ho gayi", Toast.LENGTH_SHORT).show()
-            }
-            .create()
-
-        // Save is wired after show() so that a validation error keeps the dialog open.
-        dialog.setOnShowListener {
-            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
-                if (!validateProfile(fields)) return@setOnClickListener
-                ProfileStore.save(this, fields.mapValues { it.value.text.toString().trim() })
-                Toast.makeText(this, "Details save ho gayi", Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }
-        }
-        dialog.show()
-    }
-
-    private fun validateProfile(fields: Map<String, EditText>): Boolean {
-        var ok = true
-        fun text(key: String): String = fields[key]?.text?.toString()?.trim().orEmpty()
-        fun fail(key: String, message: String) {
-            fields[key]?.error = message
-            ok = false
-        }
-
-        val dob = text("dob")
-        if (dob.isNotEmpty() &&
-            !Regex("(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/[0-9]{4}").matches(dob)
-        ) fail("dob", "DD/MM/YYYY format mein likho")
-
-        val mobile = text("mobile")
-        if (mobile.isNotEmpty() && !Regex("[6-9][0-9]{9}").matches(mobile)) {
-            fail("mobile", "10 digit ka mobile number likho")
-        }
-
-        val aadhaar = text("aadhaar")
-        if (aadhaar.isNotEmpty() && !Regex("[0-9]{12}").matches(aadhaar)) {
-            fail("aadhaar", "12 digit ka Aadhaar number likho")
-        }
-
-        val email = text("email")
-        if (email.isNotEmpty() && !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            fail("email", "Sahi email likho")
-        }
-        return ok
-    }
-
-    // --------------------------------------------------------------- auto-fill
-
-    private fun runAutoFill() {
-        if (webPanel.visibility != View.VISIBLE) {
-            aiSay("Pehle koi portal kholo (menu se service chuno), phir main details bharunga.")
-            return
-        }
-        val profile = ProfileStore.load(this)
-        if (profile.isEmpty()) {
-            aiSay("Abhi aapki details save nahi hain. Menu mein \"My details\" bharo, phir dobara bolo.")
-            showProfileDialog()
-            return
-        }
-        // Only ever fill official government pages, never any other site.
-        val host = Uri.parse(portalWebView.url ?: "").host ?: ""
-        if (!host.endsWith(".gov.in")) {
-            aiSay("Yeh page sarkari (.gov.in) site ka nahi hai, isliye main yahan details nahi bharunga.")
-            return
-        }
-        FormAutoFiller.fill(portalWebView, profile) { result -> aiSay(autoFillSummary(result)) }
-    }
-
-    private fun autoFillSummary(result: FormAutoFiller.Result?): String {
-        if (result == null) {
-            return "Details bharne mein dikkat aayi. Page reload karke dobara try karo."
-        }
-        if (result.filled.isEmpty()) {
-            return "Is page pe mujhe bharne layak field nahi mili. " +
-                "Form wale step pe pahunch kar dobara \"details bhar do\" likho."
-        }
-        val labels = ProfileStore.LABELS
-        val done = result.filled.joinToString(", ") { labels[it] ?: it }
-        val text = StringBuilder("Maine yeh bhar diya: $done.")
-        if (result.missing.isNotEmpty()) {
-            val left = result.missing.joinToString(", ") { labels[it] ?: it }
-            text.append("\n\nYeh is page pe nahi mile (agle step mein aa sakte hain): $left.")
-        }
-        text.append("\n\nCAPTCHA, OTP aur Submit aapko khud karna hai. Bhari hui details ek baar check kar lena.")
-        return text.toString()
     }
 
     // ------------------------------------------------------------ portal panel
@@ -360,6 +212,7 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 updateAddressBar(url)
                 view?.evaluateJavascript(DESKTOP_VIEWPORT_JS, null)
+                maybeAutoFill(view, url)
             }
 
             override fun onReceivedError(
@@ -387,28 +240,6 @@ class MainActivity : AppCompatActivity() {
             override fun onReceivedTitle(view: WebView?, title: String?) {
                 if (!title.isNullOrBlank()) tabTitle.text = title
             }
-
-            // The user picks the document (photo, signature, PDF) from the phone.
-            override fun onShowFileChooser(
-                webView: WebView?,
-                filePathCallback: ValueCallback<Array<Uri>>?,
-                fileChooserParams: WebChromeClient.FileChooserParams?
-            ): Boolean {
-                fileCallback?.onReceiveValue(null)
-                fileCallback = filePathCallback
-                val intent = fileChooserParams?.createIntent()
-                if (intent == null) {
-                    fileCallback = null
-                    return false
-                }
-                return try {
-                    fileChooserLauncher.launch(intent)
-                    true
-                } catch (e: ActivityNotFoundException) {
-                    fileCallback = null
-                    false
-                }
-            }
         }
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener {
@@ -419,7 +250,6 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<ImageButton>(R.id.btnReload).setOnClickListener { portalWebView.reload() }
         findViewById<ImageButton>(R.id.btnCloseWeb).setOnClickListener { closePortal() }
-        findViewById<ImageButton>(R.id.btnAutoFill).setOnClickListener { runAutoFill() }
         findViewById<ImageButton>(R.id.btnOpenExternal).setOnClickListener {
             openExternal(portalWebView.url ?: activeService?.url)
         }
@@ -459,6 +289,17 @@ class MainActivity : AppCompatActivity() {
         if (url.isNullOrEmpty()) return
         urlText.text = url
         lockIcon.visibility = if (url.startsWith("https://")) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Auto-fill only runs while the page is still on the SAME host as the
+     * selected service, so the user's data is never injected into other sites.
+     */
+    private fun maybeAutoFill(view: WebView?, url: String?) {
+        val service = activeService ?: return
+        if (view == null || url == null || service.fieldMap.isEmpty()) return
+        if (Uri.parse(url).host != Uri.parse(service.url).host) return
+        FormAutoFiller.fillTextFields(view, userProfile, service.fieldMap)
     }
 
     private fun openExternal(url: String?) {
