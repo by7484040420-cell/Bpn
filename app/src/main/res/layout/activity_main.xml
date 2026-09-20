@@ -126,9 +126,10 @@
                         android:textStyle="bold" />
 
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
+                        android:layout_weight="1"
                         android:orientation="vertical">
 
                         <TextView
@@ -142,6 +143,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:singleLine="true"
                             android:text="Ask me anything, I am here to help!"
                             android:textColor="@color/text_secondary"
                             android:textSize="11sp" />
@@ -281,6 +284,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@color/toolbar_bg"
+                    android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/toolbarRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:padding="3dp">
@@ -319,6 +328,7 @@
                         android:tint="@color/text_primary" />
 
                     <LinearLayout
+                        android:id="@+id/urlPill"
                         android:layout_width="0dp"
                         android:layout_height="32dp"
                         android:layout_marginStart="4dp"
@@ -382,6 +392,17 @@
                         android:scaleType="centerInside"
                         android:src="@drawable/ic_fullscreen"
                         android:tint="@color/text_primary" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/urlRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="3dp"
+                    android:paddingEnd="3dp"
+                    android:paddingBottom="4dp"
+                    android:visibility="gone" />
                 </LinearLayout>
 
                 <ProgressBar

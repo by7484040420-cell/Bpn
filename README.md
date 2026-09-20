@@ -1,9 +1,10 @@
 # BIPIN AI - Government Form Assistant (Android)
 
-Phone ko sideways (landscape) chalao. Layout laptop jaisa hai:
+Phone seedha (portrait) ya tirchha (landscape), dono mein chalta hai. Layout laptop jaisa hai:
 
 - Header: menu (☰) button, BIPIN AI naam, Online
-- Left: AI chat. Right: sarkari portal (desktop mode), dono aadhe-aadhe
+- Left: AI chat. Right: sarkari portal (desktop mode). Tirchha = 50/50, seedha = 40/60
+- Portal toolbar ka arrows button: tirchha = portal 2/3, seedha = sirf portal (dobara dabao to chat wapas)
 - Menu (☰): Home, PAN Card, Income Tax, Aadhaar, Driving License, Ration Card, Scholarship, My details
 - Service chunte hi AI jawab deta hai aur portal right side mein khul jata hai
 
@@ -26,9 +27,7 @@ Phone ko sideways (landscape) chalao. Layout laptop jaisa hai:
 ## TODO
 - Real AI backend (never send Aadhaar / saved details to it)
 - Verify auto-fill on each portal
-ional portalUrl/label)
-- `ChatAdapter.kt` — RecyclerView adapter; portal button tap hone par callback fire karta hai
-- `GovtService.kt` — **saare 6 portal ki real URLs**, har ek ka note, aur (jahan verify
+rtal ki real URLs**, har ek ka note, aur (jahan verify
   kiya) fieldMap for auto-fill
 - `FormAutoFiller.kt` — JS injection se text fields auto-fill karta hai (CAPTCHA/OTP chhod ke)
 - `MainActivity.kt` — sab jodta hai: chat seed karta hai saare 6 services ke saath,

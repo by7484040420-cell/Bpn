@@ -3,11 +3,13 @@ package com.bipinai.chat
 import android.content.ActivityNotFoundException
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -54,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messageInput: EditText
 
     private lateinit var sidebar: View
+    private lateinit var chatPanel: View
     private lateinit var panelDivider: View
     private lateinit var webPanel: View
     private lateinit var portalWebView: WebView
@@ -274,6 +277,7 @@ class MainActivity : AppCompatActivity() {
             aiSay("Pehle koi portal kholo (menu se service chuno), phir main details bharunga.")
             return
         }
+        if (portalWide && isPortrait()) setPortalWide(false)
         val profile = ProfileStore.load(this)
         if (profile.isEmpty()) {
             aiSay("Abhi aapki details save nahi hain. Menu mein \"My details\" bharo, phir dobara bolo.")
@@ -311,6 +315,7 @@ class MainActivity : AppCompatActivity() {
     // ------------------------------------------------------------ portal panel
 
     private fun setupWebPanel() {
+        chatPanel = findViewById(R.id.chatPanel)
         webPanel = findViewById(R.id.webPanel)
         panelDivider = findViewById(R.id.panelDivider)
         portalWebView = findViewById(R.id.portalWebView)
@@ -424,6 +429,8 @@ class MainActivity : AppCompatActivity() {
             openExternal(portalWebView.url ?: activeService?.url)
         }
         btnToggleSize.setOnClickListener { setPortalWide(!portalWide) }
+
+        applyOrientation()
     }
 
     private fun openPortal(service: GovtService) {
@@ -433,6 +440,9 @@ class MainActivity : AppCompatActivity() {
         updateAddressBar(service.url)
         webPanel.visibility = View.VISIBLE
         panelDivider.visibility = View.VISIBLE
+        portalWide = false
+        btnToggleSize.setImageResource(R.drawable.ic_fullscreen)
+        applyPanelLayout()
         portalWebView.loadUrl(service.url)
     }
 
@@ -440,19 +450,74 @@ class MainActivity : AppCompatActivity() {
         portalWebView.stopLoading()
         webPanel.visibility = View.GONE
         panelDivider.visibility = View.GONE
+        applyPanelLayout()
         activeService = null
         highlightNav(null)
     }
 
-    /** false = chat and portal share the screen 50/50, true = portal gets two thirds. */
+    /**
+     * Phone sideways: false = chat and portal 50/50, true = portal gets two thirds.
+     * Phone upright: false = chat left / portal right (40/60), true = portal only.
+     */
     private fun setPortalWide(wide: Boolean) {
         portalWide = wide
-        val params = webPanel.layoutParams as LinearLayout.LayoutParams
-        params.weight = if (wide) 2f else 1f
-        webPanel.layoutParams = params
+        applyPanelLayout()
         btnToggleSize.setImageResource(
             if (wide) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen
         )
+    }
+
+    private fun isPortrait(): Boolean =
+        resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    private fun applyPanelLayout() {
+        val portalOpen = webPanel.visibility == View.VISIBLE
+        val chatParams = chatPanel.layoutParams as LinearLayout.LayoutParams
+        val webParams = webPanel.layoutParams as LinearLayout.LayoutParams
+        if (isPortrait()) {
+            chatParams.weight = 2f
+            webParams.weight = 3f
+            chatPanel.visibility = if (portalWide && portalOpen) View.GONE else View.VISIBLE
+        } else {
+            chatParams.weight = 1f
+            webParams.weight = if (portalWide) 2f else 1f
+            chatPanel.visibility = View.VISIBLE
+        }
+        chatPanel.layoutParams = chatParams
+        webPanel.layoutParams = webParams
+    }
+
+    /** Upright phone: address bar goes on its own row under the buttons (not enough width). */
+    private fun placeUrlPill(portrait: Boolean) {
+        val pill = findViewById<View>(R.id.urlPill)
+        val buttonRow = findViewById<LinearLayout>(R.id.toolbarRow)
+        val urlRow = findViewById<LinearLayout>(R.id.urlRow)
+        val target = if (portrait) urlRow else buttonRow
+        if (pill.parent !== target) {
+            (pill.parent as? ViewGroup)?.removeView(pill)
+            if (portrait) {
+                val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(32))
+                params.setMargins(dp(3), 0, dp(3), 0)
+                urlRow.addView(pill, params)
+            } else {
+                val params = LinearLayout.LayoutParams(0, dp(32), 1f)
+                params.setMargins(dp(4), 0, dp(4), 0)
+                buttonRow.addView(pill, 3, params)
+            }
+        }
+        urlRow.visibility = if (portrait) View.VISIBLE else View.GONE
+    }
+
+    private fun applyOrientation() {
+        placeUrlPill(isPortrait())
+        applyPanelLayout()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyOrientation()
     }
 
     private fun updateAddressBar(url: String?) {
