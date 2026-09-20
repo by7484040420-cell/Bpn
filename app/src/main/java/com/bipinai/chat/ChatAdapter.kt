@@ -1,65 +1,73 @@
 package com.bipinai.chat
 
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
+/**
+ * Two bubble styles: AI (left, avatar, optional portal button) and user (right).
+ * onPortalClick is called with the service whenever the user taps the
+ * "Open ..." button inside an AI bubble.
+ */
 class ChatAdapter(
     private val messages: MutableList<ChatMessage>,
-    private val onPortalClick: (url: String, label: String) -> Unit
-) : RecyclerView.Adapter<ChatAdapter.MessageViewHolder>() {
+    private val onPortalClick: (GovtService) -> Unit
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    inner class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val rowContainer: LinearLayout = view.findViewById(R.id.rowContainer)
-        val avatarView: TextView = view.findViewById(R.id.avatarView)
-        val bubbleContainer: LinearLayout = view.findViewById(R.id.bubbleContainer)
+    private class AiViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val bubbleText: TextView = view.findViewById(R.id.bubbleText)
+        val timeText: TextView = view.findViewById(R.id.timeText)
         val portalButton: Button = view.findViewById(R.id.portalButton)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_chat_bubble, parent, false)
-        return MessageViewHolder(view)
+    private class UserViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val bubbleText: TextView = view.findViewById(R.id.bubbleText)
+        val timeText: TextView = view.findViewById(R.id.timeText)
     }
 
-    override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
+    override fun getItemViewType(position: Int): Int =
+        if (messages[position].isFromUser) TYPE_USER else TYPE_AI
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return if (viewType == TYPE_USER) {
+            UserViewHolder(inflater.inflate(R.layout.item_message_user, parent, false))
+        } else {
+            AiViewHolder(inflater.inflate(R.layout.item_message_ai, parent, false))
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = messages[position]
-        holder.bubbleText.text = message.text
-
-        val context = holder.itemView.context
-        if (message.isFromUser) {
-            holder.rowContainer.gravity = Gravity.END
-            holder.avatarView.visibility = View.GONE
-            holder.bubbleContainer.background = ContextCompat.getDrawable(context, R.drawable.bg_bubble_user)
-        } else {
-            holder.rowContainer.gravity = Gravity.START
-            holder.avatarView.visibility = View.VISIBLE
-            holder.avatarView.text = "AI"
-            holder.bubbleContainer.background = ContextCompat.getDrawable(context, R.drawable.bg_bubble_ai)
-        }
-
-        if (message.portalUrl != null) {
-            holder.portalButton.visibility = View.VISIBLE
-            holder.portalButton.text = message.portalLabel ?: "Open Portal"
-            holder.portalButton.setOnClickListener {
-                onPortalClick(message.portalUrl, message.portalLabel ?: "Portal")
+        if (holder is UserViewHolder) {
+            holder.bubbleText.text = message.text
+            holder.timeText.text = message.time
+        } else if (holder is AiViewHolder) {
+            holder.bubbleText.text = message.text
+            holder.timeText.text = message.time
+            val service = message.service
+            if (service != null) {
+                holder.portalButton.visibility = View.VISIBLE
+                holder.portalButton.text = "Open ${service.shortName} ↗"
+                holder.portalButton.setOnClickListener { onPortalClick(service) }
+            } else {
+                holder.portalButton.visibility = View.GONE
             }
-        } else {
-            holder.portalButton.visibility = View.GONE
         }
     }
 
-    override fun getItemCount() = messages.size
+    override fun getItemCount(): Int = messages.size
 
     fun addMessage(message: ChatMessage) {
         messages.add(message)
         notifyItemInserted(messages.size - 1)
+    }
+
+    companion object {
+        private const val TYPE_AI = 0
+        private const val TYPE_USER = 1
     }
 }

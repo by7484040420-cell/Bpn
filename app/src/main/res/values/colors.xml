@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_dark">#0B0F1A</color>
-    <color name="panel_dark">#111827</color>
-    <color name="sidebar_bg">#0F1420</color>
-    <color name="toolbar_bg">#1A2233</color>
-    <color name="bubble_ai">#1A2233</color>
-    <color name="bubble_user">#2563EB</color>
+    <color name="bg_dark">#050B1A</color>
+    <color name="panel_dark">#0A1326</color>
+    <color name="sidebar_bg">#0A1326</color>
+    <color name="toolbar_bg">#0F1B33</color>
+    <color name="bubble_ai">#0F1B33</color>
+    <color name="bubble_user">#2F6BFF</color>
     <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#8A93A6</color>
-    <color name="accent">#2563EB</color>
+    <color name="text_secondary">#8FA0BF</color>
+    <color name="accent">#2F6BFF</color>
+    <color name="nav_selected">#17306B</color>
+    <color name="border">#1B2A47</color>
     <color name="online_green">#22C55E</color>
+    <color name="online_bg">#0F2A22</color>
 </resources>

@@ -1,15 +1,18 @@
 package com.bipinai.chat
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 /**
  * One chat bubble.
- * - portalUrl != null  -> bubble renders an "Open Portal" button that loads
- *   that URL in the right-side WebView panel when tapped.
- * - portalLabel        -> button text, e.g. "Open PAN Portal"
+ * - service != null -> the bubble shows an "Open <service>" button that
+ *   opens that portal in the portal panel when tapped.
  */
 data class ChatMessage(
-    val id: Long = System.currentTimeMillis(),
+    val id: Long = System.nanoTime(),
     val text: String,
     val isFromUser: Boolean,
-    val portalUrl: String? = null,
-    val portalLabel: String? = null
+    val service: GovtService? = null,
+    val time: String = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
 )
