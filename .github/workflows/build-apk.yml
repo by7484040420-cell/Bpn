@@ -32,6 +32,29 @@ jobs:
             echo "No project.zip found, building the files already in the repo"
           fi
 
+      - name: Check XML files
+        run: |
+          python3 - <<'PY'
+          import glob, sys
+          import xml.etree.ElementTree as ET
+          bad = 0
+          files = ["app/src/main/AndroidManifest.xml"] + glob.glob("app/src/main/res/**/*.xml", recursive=True)
+          for f in files:
+              raw = open(f, "rb").read()
+              clean = raw.lstrip(b"\xef\xbb\xbf \t\r\n")
+              if clean != raw:
+                  open(f, "wb").write(clean)
+                  print("cleaned leading junk in", f)
+              try:
+                  ET.parse(f)
+              except Exception as e:
+                  bad += 1
+                  print("BROKEN XML:", f, "->", e)
+                  print("  first bytes:", repr(clean[:120]))
+          print("XML check done, broken files:", bad)
+          sys.exit(1 if bad else 0)
+          PY
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
