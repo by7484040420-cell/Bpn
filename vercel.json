@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/scan-jobs?secret=CRON_SECRET_PLACEHOLDER",
-      "schedule": "*/30 * * * *"
-    }
-  ]
-}
