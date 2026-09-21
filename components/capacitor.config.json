@@ -1,0 +1,10 @@
+{
+  "appId": "com.sarkariai.app",
+  "appName": "Sarkari AI",
+  "webDir": "public",
+  "server": {
+    "url": "https://sarkari-ai.onrender.com",
+    "cleartext": true,
+    "androidScheme": "https"
+  }
+}
