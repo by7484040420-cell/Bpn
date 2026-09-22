@@ -1,0 +1,39 @@
+name: Unpack project.zip
+
+on:
+  push:
+    paths:
+      - "project.zip"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Unzip project.zip into the repo
+        run: |
+          test -f project.zip
+          unzip -q -o project.zip -d _unpacked
+          rm -rf app/src
+          cp -a _unpacked/. .
+          rm -rf _unpacked project.zip
+
+      - name: Commit the unpacked files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Unpack project.zip" || echo "Nothing to commit"
+          git push
+
+      - name: Start the APK build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build-apk.yml --ref "$GITHUB_REF_NAME"
